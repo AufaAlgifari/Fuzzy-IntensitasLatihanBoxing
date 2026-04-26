@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BoxFuzzy — Sistem Penentuan Intensitas Latihan Boxing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,400;0,600;0,700;1,400&family=Barlow+Condensed:wght@500;700&display=swap" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --surface: #111111;
+        --surface2: #181818;
+        --border: #2a2a2a;
+        --red: #e63030;
+        --red-dim: #7a1a1a;
+        --gold: #e8a020;
+        --gold-dim: #6b4a0f;
+        --white: #f0ece4;
+        --muted: #888;
+        --green: #4ade80;
+        --yellow: #facc15;
+        --orange: #fb923c;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--white);
+        font-family: "Barlow", sans-serif;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* ── BACKGROUND TEXTURE ── */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        background: repeating-linear-gradient(0deg, transparent, transparent 39px, #ffffff04 39px, #ffffff04 40px), repeating-linear-gradient(90deg, transparent, transparent 39px, #ffffff04 39px, #ffffff04 40px);
+        pointer-events: none;
+      }
+
+      /* ── HEADER ── */
+      header {
+        position: relative;
+        z-index: 10;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, #130000 0%, var(--bg) 100%);
+        padding: 0 2rem;
+      }
+
+      .header-inner {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.4rem 0;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+      }
+
+      .logo-gloves {
+        font-size: 2rem;
+      }
+
+      .logo-text {
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 2.2rem;
+        letter-spacing: 0.05em;
+        color: var(--white);
+        line-height: 1;
+      }
+
+      .logo-text span {
+        color: var(--red);
+      }
+
+      .badge {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        background: var(--red-dim);
+        color: var(--red);
+        border: 1px solid var(--red);
+        padding: 0.3rem 0.7rem;
+        border-radius: 2px;
+      }
+
+      /* ── HERO ── */
+      .hero {
+        position: relative;
+        z-index: 5;
+        text-align: center;
+        padding: 4rem 2rem 2.5rem;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      .hero-tag {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin-bottom: 1rem;
+      }
+
+      .hero h1 {
+        font-family: "Bebas Neue", sans-serif;
+        font-size: clamp(3rem, 8vw, 6rem);
+        letter-spacing: 0.04em;
+        line-height: 0.95;
+        color: var(--white);
+      }
+
+      .hero h1 em {
+        font-style: normal;
+        color: var(--red);
+        display: block;
+      }
+
+      .hero-sub {
+        margin-top: 1rem;
+        font-size: 1rem;
+        color: var(--muted);
+        max-width: 520px;
+        margin: 1rem auto 0;
+      }
+
+      /* ── MAIN GRID ── */
+      .main {
+        position: relative;
+        z-index: 5;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem;
+        display: grid;
+        grid-template-columns: 1fr 1.3fr;
+        gap: 1.5rem;
+      }
+
+      @media (max-width: 768px) {
+        .main {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ── CARDS ── */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1.8rem;
+      }
+
+      .card-title {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .card-title::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+
+      /* ── SLIDERS ── */
+      .input-group {
+        margin-bottom: 1.8rem;
+      }
+
+      .input-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.6rem;
+      }
+
+      .input-label-text {
+        font-family: "Barlow Condensed", sans-serif;
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: 0.05em;
+        color: var(--white);
+      }
+
+      .input-value {
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 1.5rem;
+        color: var(--red);
+        letter-spacing: 0.05em;
+      }
+
+      .input-value span {
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
+
+      .slider-track {
+        position: relative;
+        height: 6px;
+        background: var(--border);
+        border-radius: 3px;
+        margin-bottom: 0.4rem;
+      }
+
+      .slider-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: linear-gradient(90deg, var(--red-dim), var(--red));
+        border-radius: 3px;
+        pointer-events: none;
+        transition: width 0.05s;
+      }
+
+      input[type="range"] {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 6px;
+        background: transparent;
+        position: relative;
+        z-index: 1;
+        cursor: pointer;
+        margin: 0;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        background: var(--red);
+        border: 2px solid var(--white);
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 12px rgba(230, 48, 48, 0.6);
+        transition:
+          transform 0.1s,
+          box-shadow 0.1s;
+      }
+
+      input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+        box-shadow: 0 0 20px rgba(230, 48, 48, 0.9);
+      }
+
+      .slider-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.68rem;
+        color: var(--muted);
+        font-family: "Barlow Condensed", sans-serif;
+        letter-spacing: 0.05em;
+      }
+
+      /* Membership bars */
+      .membership-bars {
+        display: flex;
+        gap: 0.4rem;
+        margin-top: 0.6rem;
+      }
+
+      .mb-item {
+        flex: 1;
+        text-align: center;
+      }
+
+      .mb-bar-wrap {
+        height: 36px;
+        display: flex;
+        align-items: flex-end;
+        background: var(--surface2);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .mb-bar {
+        width: 100%;
+        background: linear-gradient(0deg, var(--red-dim), var(--red));
+        transition: height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .mb-label {
+        font-size: 0.6rem;
+        font-family: "Barlow Condensed", sans-serif;
+        color: var(--muted);
+        margin-top: 0.3rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* ── BUTTON ── */
+      .btn-hitung {
+        width: 100%;
+        padding: 1.1rem;
+        background: var(--red);
+        color: var(--white);
+        border: none;
+        border-radius: 3px;
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 1.3rem;
+        letter-spacing: 0.15em;
+        cursor: pointer;
+        transition:
+          background 0.2s,
+          transform 0.1s,
+          box-shadow 0.2s;
+        box-shadow: 0 4px 24px rgba(230, 48, 48, 0.4);
+        margin-top: 0.5rem;
+      }
+
+      .btn-hitung:hover {
+        background: #ff4444;
+        box-shadow: 0 6px 32px rgba(230, 48, 48, 0.7);
+      }
+
+      .btn-hitung:active {
+        transform: scale(0.98);
+      }
+
+      .btn-hitung:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        animation: pulse 0.8s ease infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.6;
+        }
+        50% {
+          opacity: 0.9;
+        }
+      }
+
+      /* ── RESULT PANEL ── */
+      #result-panel {
+        display: none;
+      }
+
+      .result-hero {
+        text-align: center;
+        padding: 2rem 1rem;
+        border-radius: 3px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        margin-bottom: 1.2rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .result-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at center, rgba(230, 48, 48, 0.1) 0%, transparent 70%);
+        pointer-events: none;
+      }
+
+      .result-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        display: block;
+      }
+
+      .result-label {
+        font-family: "Bebas Neue", sans-serif;
+        font-size: 3.5rem;
+        letter-spacing: 0.1em;
+        line-height: 1;
+      }
+
+      .result-crisp {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--muted);
+        margin-top: 0.3rem;
+      }
+
+      .result-crisp strong {
+        color: var(--gold);
+        font-size: 1.4rem;
+        font-family: "Bebas Neue", sans-serif;
+      }
+      .intensity-meter {
+        margin: 1.2rem 0;
+      }
+
+      .meter-label {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 0.5rem;
+      }
+
+      .meter-track {
+        height: 12px;
+        background: var(--surface2);
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+
+      .meter-fill {
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        background: linear-gradient(90deg, #4ade80, #facc15, #fb923c, #e63030);
+      }
+      .result-desc {
+        font-size: 0.88rem;
+        color: var(--muted);
+        line-height: 1.6;
+        margin-bottom: 1.2rem;
+        padding: 1rem;
+        background: var(--surface2);
+        border-left: 3px solid var(--red);
+        border-radius: 0 3px 3px 0;
+      }
+      .rekomendasi-title {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin-bottom: 0.7rem;
+      }
+
+      .rekom-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .rekom-list li {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.88rem;
+        background: var(--surface2);
+        padding: 0.6rem 0.8rem;
+        border-radius: 3px;
+        border: 1px solid var(--border);
+        transition: border-color 0.2s;
+      }
+
+      .rekom-list li:hover {
+        border-color: var(--red);
+      }
+
+      .rekom-list li::before {
+        content: "▸";
+        color: var(--red);
+        font-size: 0.8rem;
+        flex-shrink: 0;
+      }
+      .chart-section {
+        grid-column: 1 / -1;
+      }
+
+      .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+      }
+
+      @media (max-width: 768px) {
+        .chart-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .chart-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1.2rem;
+      }
+
+      .chart-card h3 {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 0.8rem;
+      }
+
+      canvas {
+        max-width: 100%;
+      }
+      .rules-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+        margin-top: 0.5rem;
+      }
+
+      .rules-table th {
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--gold);
+        text-align: left;
+        padding: 0.5rem 0.6rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .rules-table td {
+        padding: 0.45rem 0.6rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+      }
+
+      .rules-table td:last-child {
+        font-weight: 700;
+        color: var(--white);
+      }
+
+      .tag-ringan {
+        color: #4ade80;
+      }
+      .tag-sedang {
+        color: #facc15;
+      }
+      .tag-berat {
+        color: #f87171;
+      }
+      .steps {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        overflow-x: auto;
+        padding-bottom: 0.3rem;
+      }
+
+      .step {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 0.4rem 0.8rem;
+        border: 1px solid var(--border);
+        border-radius: 2px;
+      }
+
+      .step.active {
+        color: var(--red);
+        border-color: var(--red);
+        background: rgba(230, 48, 48, 0.07);
+      }
+      footer {
+        position: relative;
+        z-index: 5;
+        text-align: center;
+        padding: 2rem;
+        border-top: 1px solid var(--border);
+        margin-top: 2rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+        font-family: "Barlow Condensed", sans-serif;
+        letter-spacing: 0.05em;
+      }
+      .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        margin-right: 0.5rem;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .anim-in {
+        animation: fadeUp 0.5s ease forwards;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <div class="logo">
+          <span class="logo-text">BOX<span>FUZZY</span></span>
+        </div>
+        <span class="badge">Sistem Fuzzy</span>
+      </div>
+    </header>
+    <div class="hero">
+      <p class="hero-tag">Kecerdasan Buatan — Logika Fuzzy</p>
+      <h1>INTENSITAS<em>LATIHAN</em>BOXING</h1>
+      <p class="hero-sub">Sistem inferensi Fuzzy untuk menentukan intensitas latihan berdasarkan usia, detak jantung istirahat, dan tingkat pengalaman.</p>
+    </div>
+    <div class="main">
+      <div class="card">
+        <div class="card-title">Input Variabel</div>
+        <div class="steps">
+          <div class="step active">① Fuzzifikasi</div>
+          <div class="step">② Inferensi</div>
+          <div class="step">③ Defuzzifikasi</div>
+        </div>
+        <div class="input-group">
+          <div class="input-label">
+            <span class="input-label-text">👤 Usia</span>
+            <span class="input-value" id="val-usia">28 <span>tahun</span></span>
+          </div>
+          <div class="slider-track">
+            <div class="slider-fill" id="fill-usia" style="width: 20%"></div>
+            <input type="range" id="sl-usia" min="15" max="60" value="28" step="1" />
+          </div>
+          <div class="slider-labels"><span>15 thn</span><span>37 thn</span><span>60 thn</span></div>
+          <div class="membership-bars" id="mb-usia">
+            <div class="mb-item">
+              <div class="mb-bar-wrap"><div class="mb-bar" id="mb-usia-muda" style="height: 0%"></div></div>
+              <div class="mb-label">Muda</div>
+            </div>
+            <div class="mb-item">
+              <div class="mb-bar-wrap"><div class="mb-bar" id="mb-usia-dewasa" style="height: 0%"></div></div>
+              <div class="mb-label">Dewasa</div>
+            </div>
+            <div class="mb-item">
+              <div class="mb-bar-wrap"><div class="mb-bar" id="mb-usia-tua" style="height: 0%"></div></div>
+              <div class="mb-label">Tua</div>
+            </div>
+          </div>
+        </div>
+        <div class="input-group">
+          <div class="input-label">
+            <span class="input-label-text">Detak Jantung Istirahat (RHR)</span>
+            <span class="input-value" id="val-rhr">65 <span>bpm</span></span>
+          </div>
+          <div class="slider-track">
+            <div class="slider-fill" id="fill-rhr" style="width: 41.7%"></div>
+            <input type="range" id="sl-rhr" min="40" max="100" value="65" step="1" />
+          </div>
+          <div class="slider-labels"><span>40 bpm</span><span>70 bpm</span><span>100 bpm</span></div>
+          <div class="membership-bars">
+            <div class="mb-item">
+              <div class="mb-bar-wrap"><div class="mb-bar" id="mb-rhr-rendah" style="height: 0%"></div></div>
+              <div class="mb-label">Rendah</div>
+            </div>
+            <div class="mb-item">
+              <div class="mb-bar-wrap"><div class="mb-bar" id="mb-rhr-normal" style="height: 0%"></div></div>
+              <div class="mb-label">Normal</div>
+            </div>
+            <div class="mb-item">
+              <div class="mb-bar-wrap"><div class="mb-bar" id="mb-rhr-tinggi" style="height: 0%"></div></div>
+              <div class="mb-label">Tinggi</div>
+            </div>
+          </div>
+        </div>
+        <div class="input-group">
+          <div class="input-label">
+            <span class="input-label-text">Pengalaman Boxing</span>
+            <span class="input-value" id="val-exp">3 <span>tahun</span></span>
+          </div>
+          <div class="slider-track">
+            <div class="slider-fill" id="fill-exp" style="width: 30%"></div>
+            <input type="range" id="sl-exp" min="0" max="10" value="3" step="0.5" />
+          </div>
+          <div class="slider-labels"><span>0 thn</span><span>5 thn</span><span>10 thn</span></div>
+          <div class="membership-bars">
+            <div class="mb-item">
+              <div class="mb-bar-wrap"><div class="mb-bar" id="mb-exp-pemula" style="height: 0%"></div></div>
+              <div class="mb-label">Pemula</div>
+            </div>
+            <div class="mb-item">
+              <div class="mb-bar-wrap"><div class="mb-bar" id="mb-exp-menengah" style="height: 0%"></div></div>
+              <div class="mb-label">Menengah</div>
+            </div>
+            <div class="mb-item">
+              <div class="mb-bar-wrap"><div class="mb-bar" id="mb-exp-ahli" style="height: 0%"></div></div>
+              <div class="mb-label">Ahli</div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-hitung" id="btn-hitung" onclick="hitung()">HITUNG INTENSITAS</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Hasil Output Fuzzy</div>
+        <div id="placeholder" style="text-align: center; padding: 3rem 1rem; color: var(--muted)">
+          <div style="font-size: 3rem; margin-bottom: 1rem"></div>
+          <div style="font-family: &quot;Barlow Condensed&quot;, sans-serif; font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase">
+            Masukkan parameter dan klik<br />
+            <strong style="color: var(--white)">HITUNG INTENSITAS</strong>
+          </div>
+        </div>
+        <div id="result-panel">
+          <div class="result-hero" id="result-hero">
+            <span class="result-icon" id="result-icon"></span>
+            <div class="result-label" id="result-label" style="color: var(--red)">—</div>
+            <div class="result-crisp">Nilai Crisp: <strong id="result-crisp-val">—</strong> / 100</div>
+          </div>
+          <div class="intensity-meter">
+            <div class="meter-label">Skala Intensitas</div>
+            <div class="meter-track">
+              <div class="meter-fill" id="meter-fill" style="width: 0%"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--muted); margin-top: 0.3rem; font-family: &quot;Barlow Condensed&quot;, sans-serif; letter-spacing: 0.05em">
+              <span>RINGAN</span><span>SEDANG</span><span>BERAT</span>
+            </div>
+          </div>
+          <p class="result-desc" id="result-desc"></p>
+          <div class="rekomendasi-title">Program Latihan yang Direkomendasikan</div>
+          <ul class="rekom-list" id="rekom-list"></ul>
+        </div>
+      </div>
+
+      <div class="chart-section">
+        <div class="card" id="chart-section" style="display: none">
+          <div class="card-title">Visualisasi Proses Fuzzy</div>
+
+          <div class="chart-grid">
+            <div class="chart-card" style="grid-column: span 2">
+              <h3>Output Fungsi Keanggotaan + Defuzzifikasi (CoA)</h3>
+              <canvas id="chartOutput" height="130"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Rule yang Aktif (α &gt; 0.001)</h3>
+              <div style="max-height: 220px; overflow-y: auto">
+                <table class="rules-table" id="rules-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Output</th>
+                      <th>α (kekuatan)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rules-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="chart-grid" style="margin-top: 1rem">
+            <div class="chart-card">
+              <h3>Keanggotaan Usia</h3>
+              <canvas id="chartUsia" height="100"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Keanggotaan RHR</h3>
+              <canvas id="chartRHR" height="100"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Keanggotaan Pengalaman</h3>
+              <canvas id="chartExp" height="100"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>BoxFuzzy — Sistem Logika Fuzzy Mamdani &nbsp;|&nbsp; Penentuan Intensitas Latihan Boxing &nbsp;|&nbsp; Praktikum Kecerdasan Buatan</footer>
+
+    <script>
+      const sliders = [
+        { id: "sl-usia", valId: "val-usia", fillId: "fill-usia", min: 15, max: 60, unit: "tahun" },
+        { id: "sl-rhr", valId: "val-rhr", fillId: "fill-rhr", min: 40, max: 100, unit: "bpm" },
+        { id: "sl-exp", valId: "val-exp", fillId: "fill-exp", min: 0, max: 10, unit: "tahun" },
+      ];
+
+      sliders.forEach((s) => {
+        const el = document.getElementById(s.id);
+        el.addEventListener("input", () => {
+          const pct = ((el.value - s.min) / (s.max - s.min)) * 100;
+          document.getElementById(s.valId).innerHTML = `${el.value} <span>${s.unit}</span>`;
+          document.getElementById(s.fillId).style.width = pct + "%";
+          updateMembershipBars();
+        });
+      });
+
+      function trimf(x, a, b, c) {
+        if (x <= a || x >= c) return 0;
+        if (x <= b) return (x - a) / (b - a);
+        return (c - x) / (c - b);
+      }
+      function trapmf(x, a, b, c, d) {
+        if (x <= a || x >= d) return 0;
+        if (x <= b) return (x - a) / (b - a);
+        if (x <= c) return 1;
+        return (d - x) / (d - c);
+      }
+
+      function updateMembershipBars() {
+        const u = +document.getElementById("sl-usia").value;
+        const r = +document.getElementById("sl-rhr").value;
+        const e = +document.getElementById("sl-exp").value;
+
+        // Usia
+        setBar("mb-usia-muda", trapmf(u, 15, 15, 20, 30));
+        setBar("mb-usia-dewasa", trimf(u, 20, 35, 50));
+        setBar("mb-usia-tua", trapmf(u, 40, 50, 60, 60));
+        // RHR
+        setBar("mb-rhr-rendah", trapmf(r, 40, 40, 55, 65));
+        setBar("mb-rhr-normal", trimf(r, 55, 68, 80));
+        setBar("mb-rhr-tinggi", trapmf(r, 72, 85, 100, 100));
+        // Pengalaman
+        setBar("mb-exp-pemula", trapmf(e, 0, 0, 1, 3));
+        setBar("mb-exp-menengah", trimf(e, 1, 4, 7));
+        setBar("mb-exp-ahli", trapmf(e, 5, 7, 10, 10));
+      }
+
+      function setBar(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.style.height = val * 100 + "%";
+      }
+
+      updateMembershipBars();
+
+      // ─── CHARTS ──────────────────────────────────────────────────────────────────
+      const chartDefaults = {
+        plugins: { legend: { labels: { color: "#888", font: { family: "'Barlow Condensed', sans-serif", size: 11 } } } },
+        scales: {
+          x: { grid: { color: "#1f1f1f" }, ticks: { color: "#555", maxTicksLimit: 8 } },
+          y: { grid: { color: "#1f1f1f" }, ticks: { color: "#555" }, min: 0, max: 1.05 },
+        },
+      };
+
+      let chartOutput, chartUsia, chartRHR, chartExp;
+
+      function initCharts(data) {
+        const c = data.chart;
+        const baseOpts = JSON.parse(JSON.stringify(chartDefaults));
+
+        [chartOutput, chartUsia, chartRHR, chartExp].forEach((ch) => ch && ch.destroy());
+
+        chartOutput = new Chart(document.getElementById("chartOutput"), {
+          type: "line",
+          data: {
+            labels: c.x.map((v) => Math.round(v)),
+            datasets: [
+              { label: "Ringan", data: c.ringan, borderColor: "#4ade80", backgroundColor: "rgba(74,222,128,0.1)", fill: true, tension: 0.4, pointRadius: 0 },
+              { label: "Sedang", data: c.sedang, borderColor: "#facc15", backgroundColor: "rgba(250,204,21,0.1)", fill: true, tension: 0.4, pointRadius: 0 },
+              { label: "Berat", data: c.berat, borderColor: "#f87171", backgroundColor: "rgba(248,113,113,0.1)", fill: true, tension: 0.4, pointRadius: 0 },
+              { label: "Agregat", data: c.total, borderColor: "#ffffff", borderWidth: 2, borderDash: [4, 3], fill: false, tension: 0.4, pointRadius: 0 },
+            ],
+          },
+          options: {
+            ...baseOpts,
+            plugins: {
+              ...baseOpts.plugins,
+              annotation: {},
+            },
+            scales: {
+              ...baseOpts.scales,
+              y: { ...baseOpts.scales.y, title: { display: true, text: "μ", color: "#555" } },
+              x: { ...baseOpts.scales.x, title: { display: true, text: "Intensitas (%)", color: "#555" } },
+            },
+          },
+        });
+
+        const ux = Array.from({ length: 46 }, (_, i) => i + 15);
+        chartUsia = new Chart(document.getElementById("chartUsia"), {
+          type: "line",
+          data: {
+            labels: ux,
+            datasets: [
+              { label: "Muda", data: ux.map((v) => trapmf(v, 15, 15, 20, 30)), borderColor: "#60a5fa", fill: false, tension: 0.4, pointRadius: 0 },
+              { label: "Dewasa", data: ux.map((v) => trimf(v, 20, 35, 50)), borderColor: "#a78bfa", fill: false, tension: 0.4, pointRadius: 0 },
+              { label: "Tua", data: ux.map((v) => trapmf(v, 40, 50, 60, 60)), borderColor: "#f472b6", fill: false, tension: 0.4, pointRadius: 0 },
+            ],
+          },
+          options: { ...baseOpts },
+        });
+
+        const rx = Array.from({ length: 61 }, (_, i) => i + 40);
+        chartRHR = new Chart(document.getElementById("chartRHR"), {
+          type: "line",
+          data: {
+            labels: rx,
+            datasets: [
+              { label: "Rendah", data: rx.map((v) => trapmf(v, 40, 40, 55, 65)), borderColor: "#34d399", fill: false, tension: 0.4, pointRadius: 0 },
+              { label: "Normal", data: rx.map((v) => trimf(v, 55, 68, 80)), borderColor: "#fbbf24", fill: false, tension: 0.4, pointRadius: 0 },
+              { label: "Tinggi", data: rx.map((v) => trapmf(v, 72, 85, 100, 100)), borderColor: "#fb7185", fill: false, tension: 0.4, pointRadius: 0 },
+            ],
+          },
+          options: { ...baseOpts },
+        });
+
+        const ex = Array.from({ length: 21 }, (_, i) => i * 0.5);
+        chartExp = new Chart(document.getElementById("chartExp"), {
+          type: "line",
+          data: {
+            labels: ex,
+            datasets: [
+              { label: "Pemula", data: ex.map((v) => trapmf(v, 0, 0, 1, 3)), borderColor: "#86efac", fill: false, tension: 0.4, pointRadius: 0 },
+              { label: "Menengah", data: ex.map((v) => trimf(v, 1, 4, 7)), borderColor: "#fde68a", fill: false, tension: 0.4, pointRadius: 0 },
+              { label: "Ahli", data: ex.map((v) => trapmf(v, 5, 7, 10, 10)), borderColor: "#fca5a5", fill: false, tension: 0.4, pointRadius: 0 },
+            ],
+          },
+          options: { ...baseOpts },
+        });
+      }
+
+      // ─── HITUNG
+      async function hitung() {
+        const btn = document.getElementById("btn-hitung");
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>MEMPROSES...';
+
+        document.querySelectorAll(".step").forEach((s, i) => {
+          s.classList.toggle("active", i === 1);
+        });
+
+        const payload = {
+          usia: +document.getElementById("sl-usia").value,
+          rhr: +document.getElementById("sl-rhr").value,
+          pengalaman: +document.getElementById("sl-exp").value,
+        };
+
+        try {
+          const res = await fetch("/hitung", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          renderResult(data);
+        } catch (e) {
+          alert("Error: " + e.message);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = "HITUNG INTENSITAS";
+          document.querySelectorAll(".step").forEach((s, i) => {
+            s.classList.toggle("active", i === 2);
+          });
+        }
+      }
+
+      function renderResult(data) {
+        document.getElementById("placeholder").style.display = "none";
+        const rp = document.getElementById("result-panel");
+        rp.style.display = "block";
+        rp.classList.add("anim-in");
+
+        document.getElementById("chart-section").style.display = "block";
+
+        document.getElementById("result-icon").textContent = data.icon;
+        document.getElementById("result-label").textContent = data.label;
+        document.getElementById("result-label").style.color = data.color;
+        document.getElementById("result-crisp-val").textContent = data.crisp;
+
+        setTimeout(() => {
+          document.getElementById("meter-fill").style.width = data.crisp + "%";
+        }, 100);
+
+        document.getElementById("result-desc").textContent = data.deskripsi;
+
+        const ul = document.getElementById("rekom-list");
+        ul.innerHTML = "";
+        data.rekomendasi.forEach((r) => {
+          const li = document.createElement("li");
+          li.textContent = r;
+          ul.appendChild(li);
+        });
+
+        const tbody = document.getElementById("rules-tbody");
+        tbody.innerHTML = "";
+        data.fired_rules.forEach((rule, i) => {
+          const [label, alpha] = rule;
+          const cls = label === "ringan" ? "tag-ringan" : label === "sedang" ? "tag-sedang" : "tag-berat";
+          tbody.innerHTML += `
+      <tr>
+        <td>${i + 1}</td>
+        <td class="${cls}">${label.toUpperCase()}</td>
+        <td>${alpha.toFixed(3)}</td>
+      </tr>`;
+        });
+
+        initCharts(data);
+
+        document.getElementById("chart-section").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      updateMembershipBars();
+    </script>
+  </body>
+</html>
