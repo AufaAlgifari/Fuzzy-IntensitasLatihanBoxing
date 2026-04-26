@@ -5,3 +5,5 @@ __pycache__/
 instance/
 *.sqlite3
 .DS_Store
+.gitignore
+.flaskenv
