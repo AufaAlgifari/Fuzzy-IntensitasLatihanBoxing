@@ -76,30 +76,35 @@ def fuzzy_inference(usia, rhr, pengalaman):
     denom = np.sum(agg_total)
     crisp = 50.0 if denom == 0 else np.sum(output_range * agg_total) / denom
 
-    # Penentuan Label & Rekomendasi
+    # Penentuan Label, Color, Icon & Rekomendasi
     if crisp < 33:
-        label_out, color, deskripsi = "RINGAN", "#4ade80", "Latihan ringan cocok untuk pemanasan..."
+        label_out, color, icon = "RINGAN", "#4ade80", "🟢"
+        deskripsi = "Latihan ringan cocok untuk pemanasan atau pemulihan."
         rekomendasi = ["Shadow Boxing 3 ronde", "Skipping 10 menit", "Teknik dasar"]
     elif crisp < 66:
-        label_out, color, deskripsi = "SEDANG", "#facc15", "Latihan intensitas sedang untuk membangun daya tahan..."
+        label_out, color, icon = "SEDANG", "#facc15", "🟡"
+        deskripsi = "Latihan intensitas sedang untuk membangun daya tahan."
         rekomendasi = ["Bag work 5 ronde", "Sparring ringan", "Core training"]
     else:
-        label_out, color, deskripsi = "BERAT", "#f87171", "Latihan intensitas tinggi untuk atlet berpengalaman..."
+        label_out, color, icon = "BERAT", "#f87171", "🔴"
+        deskripsi = "Latihan intensitas tinggi untuk atlet berpengalaman."
         rekomendasi = ["Full sparring", "Heavy bag power", "HIIT conditioning"]
 
     return {
         "crisp": round(float(crisp), 2),
         "label": label_out,
         "color": color,
+        "icon": icon,
         "deskripsi": deskripsi,
         "rekomendasi": rekomendasi,
         "chart": {
             "x": output_range[::10].tolist(),
-            "total": agg_total[::10].tolist()
+            "total": agg_total[::10].tolist(),
+            "ringan": agg_ringan[::10].tolist(),
+            "sedang": agg_sedang[::10].tolist(),
+            "berat": agg_berat[::10].tolist()
         }
     }
-
-# --- ROUTES ---
 
 @app.route("/")
 def index():
